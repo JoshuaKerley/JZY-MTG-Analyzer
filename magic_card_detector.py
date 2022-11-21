@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 from shapely.geometry import LineString
 from shapely.geometry.polygon import Polygon
@@ -504,8 +505,8 @@ class TestImage:
         plt.imshow(cv2.cvtColor(self.original, cv2.COLOR_BGR2RGB))
         plt.axis('off')
 
-        output = self.original.copy()
-        output = cv2.resize(output, )
+        # Scale up the image, to allow for higher-res output with overlays
+        output = cv2.resize(self.original.copy(), None, fx = 2, fy = 2, interpolation = cv2.INTER_CUBIC)
 
         for candidate in self.candidate_list:
             if not candidate.is_fragment:
@@ -532,16 +533,22 @@ class TestImage:
                          fontsize=fntsze,
                          bbox=dict(facecolor=bbox_color,
                                    alpha=0.7))
+                
+                # Scale up the bounding box to match scaled output image
+                bquad_corners *= 2
 
+                # If card is rotated (width larger than height), then shift points to represent correct orientation
+                if math.dist(bquad_corners[0], bquad_corners[1]) > math.dist(bquad_corners[1], bquad_corners[2]):
+                    bquad_corners = np.roll(bquad_corners, -1, axis=0)
+
+                # Calculate homography matrix
                 reference_corners = np.array([[0,0], [744,0], [744, 1039], [0, 1039]])
                 H, _ = cv2.findHomography(reference_corners, bquad_corners, method=0)
-                print(H)
 
+                # Read overlay image
                 overlay = cv2.imread('reference_images/' + candidate.name + '.png')
-
-                h, w = overlay.shape[:2]
-                overlay_pts = np.array([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
         
+                # Draw overlay onto output image
                 output = cv2.warpPerspective(overlay, H, (output.shape[1], output.shape[0]), output, cv2.INTER_LINEAR, cv2.BORDER_TRANSPARENT)
 
         # plt.savefig(output_path + '/MTG_card_recognition_results_' +
