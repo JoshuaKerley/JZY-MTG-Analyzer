@@ -28,6 +28,8 @@ from PIL import Image as PILImage
 import imagehash
 import cv2
 
+import requests
+
 
 def order_polygon_points(x, y):
     """
@@ -538,12 +540,27 @@ class TestImage:
                 bquad_corners *= 2
 
                 # If card is rotated (width larger than height), then shift points to represent correct orientation
+                tapped = False
                 if math.dist(bquad_corners[0], bquad_corners[1]) > math.dist(bquad_corners[1], bquad_corners[2]):
                     bquad_corners = np.roll(bquad_corners, -1, axis=0)
+                    tapped = True
 
                 # Calculate homography matrix
                 reference_corners = np.array([[0,0], [744,0], [744, 1039], [0, 1039]])
                 H, _ = cv2.findHomography(reference_corners, bquad_corners, method=0)
+
+
+                type = None
+                response = requests.get('https://api.scryfall.com/cards/named?fuzzy=' + candidate.name.rstrip("0123456789-"))
+                if response.status_code == 200:
+                    card_json = response.json()
+                    type_string = card_json['type_line']
+                    if 'Creature' in type_string:
+                        type = 'creature'
+                    elif 'Land' in type_string:
+                        type = 'land'
+                    elif 'Artifact' in type_string:
+                        type = 'artifact'
 
                 # Read overlay image
                 overlay = cv2.imread('reference_images/' + candidate.name + '.png')
@@ -551,12 +568,27 @@ class TestImage:
                 # Draw overlay onto output image
                 output = cv2.warpPerspective(overlay, H, (output.shape[1], output.shape[0]), output, cv2.INTER_LINEAR, cv2.BORDER_TRANSPARENT)
 
+                # Determine border color
+                border_color = None
+                if type == 'land':
+                    border_color = (0, 255, 0)
+                    if tapped:
+                        border_color = (0, 0, 255)
+                elif type == 'creature':
+                    border_color = (0, 255, 255)
+                elif type == 'artifact':
+                    border_color = (255, 0, 255)
+
+                # Draw border
+                if border_color is not None:
+                    output = cv2.polylines(output, [np.int32(bquad_corners)], True, border_color, 10, cv2.LINE_AA)
+                    
+
         # plt.savefig(output_path + '/MTG_card_recognition_results_' +
         #             str(self.name.split('.jpg')[0]) +
         #             '.jpg', dpi=600)
 
-        cv2.imwrite(output_path + "/result.png", output)
-    
+        cv2.imwrite(output_path + "/result-" + self.name, output)    
 
         if visual:
             plt.show()
