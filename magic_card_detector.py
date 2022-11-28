@@ -502,10 +502,6 @@ class TestImage:
         """
         Plots the recognized cards into the full image.
         """
-        # Plotting
-        plt.figure()
-        plt.imshow(cv2.cvtColor(self.original, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
 
         # Scale up the image, to allow for higher-res output with overlays
         output = cv2.resize(self.original.copy(), None, fx = 2, fy = 2, interpolation = cv2.INTER_CUBIC)
@@ -518,23 +514,6 @@ class TestImage:
                     candidate.bounding_quad.exterior.coords)[:-1, 0]
                 bquad_corners[:, 1] = np.asarray(
                     candidate.bounding_quad.exterior.coords)[:-1, 1]
-
-                plt.plot(np.append(bquad_corners[:, 0],
-                                   bquad_corners[0, 0]),
-                         np.append(bquad_corners[:, 1],
-                                   bquad_corners[0, 1]), 'g-')
-                bounding_poly = Polygon([[x, y] for (x, y) in
-                                         zip(bquad_corners[:, 0],
-                                             bquad_corners[:, 1])])
-                fntsze = int(6 * bounding_poly.length / full_image.shape[1])
-                bbox_color = 'white' if candidate.is_recognized else 'red'
-                plt.text(np.average(bquad_corners[:, 0]),
-                         np.average(bquad_corners[:, 1]),
-                         candidate.name.capitalize(),
-                         horizontalalignment='center',
-                         fontsize=fntsze,
-                         bbox=dict(facecolor=bbox_color,
-                                   alpha=0.7))
                 
                 # Scale up the bounding box to match scaled output image
                 bquad_corners *= 2
@@ -549,18 +528,20 @@ class TestImage:
                 reference_corners = np.array([[0,0], [744,0], [744, 1039], [0, 1039]])
                 H, _ = cv2.findHomography(reference_corners, bquad_corners, method=0)
 
-
+                # Retrieve card data from Scryfall
                 type = None
                 response = requests.get('https://api.scryfall.com/cards/named?fuzzy=' + candidate.name.rstrip("0123456789-"))
                 if response.status_code == 200:
                     card_json = response.json()
                     type_string = card_json['type_line']
-                    if 'Creature' in type_string:
+                    if 'Creature' in type_string or 'Planeswalker' in type_string:
                         type = 'creature'
                     elif 'Land' in type_string:
                         type = 'land'
                     elif 'Artifact' in type_string:
                         type = 'artifact'
+                    elif 'Enchantment' in type_string:
+                        type = 'enchantment'
 
                 # Read overlay image
                 overlay = cv2.imread('reference_images/' + candidate.name + '.png')
@@ -576,22 +557,15 @@ class TestImage:
                         border_color = (0, 0, 255)
                 elif type == 'creature':
                     border_color = (0, 255, 255)
-                elif type == 'artifact':
+                elif type == 'artifact' or type == 'enchantment':
                     border_color = (255, 0, 255)
 
                 # Draw border
                 if border_color is not None:
                     output = cv2.polylines(output, [np.int32(bquad_corners)], True, border_color, 10, cv2.LINE_AA)
-                    
 
-        # plt.savefig(output_path + '/MTG_card_recognition_results_' +
-        #             str(self.name.split('.jpg')[0]) +
-        #             '.jpg', dpi=600)
+        cv2.imwrite(output_path + "/result-" + self.name, output)
 
-        cv2.imwrite(output_path + "/result-" + self.name, output)    
-
-        if visual:
-            plt.show()
 
     def print_recognized(self):
         """
