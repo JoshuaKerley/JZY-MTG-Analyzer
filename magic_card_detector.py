@@ -534,17 +534,21 @@ class TestImage:
                 if response.status_code == 200:
                     card_json = response.json()
                     type_string = card_json['type_line']
-                    if 'Creature' in type_string or 'Planeswalker' in type_string:
+                    if 'Creature' in type_string:
                         type = 'creature'
+                    elif 'Planeswalker' in type_string:
+                        type = 'Planeswalker'
                     elif 'Land' in type_string:
                         type = 'land'
                     elif 'Artifact' in type_string:
                         type = 'artifact'
                     elif 'Enchantment' in type_string:
                         type = 'enchantment'
-
+                    #where to do weird math with a card
+                    print("name: ", card_json['name'], " cost: ", card_json['mana_cost'], "\nOracle text: ", card_json['oracle_text'], "\n\n")
                 # Read overlay image
                 overlay = cv2.imread('reference_images/' + candidate.name + '.png')
+                
         
                 # Draw overlay onto output image
                 output = cv2.warpPerspective(overlay, H, (output.shape[1], output.shape[0]), output, cv2.INTER_LINEAR, cv2.BORDER_TRANSPARENT)
@@ -555,7 +559,7 @@ class TestImage:
                     border_color = (0, 255, 0)
                     if tapped:
                         border_color = (0, 0, 255)
-                elif type == 'creature':
+                elif type == 'creature' or type == 'Planeswalker':
                     border_color = (0, 255, 255)
                 elif type == 'artifact' or type == 'enchantment':
                     border_color = (255, 0, 255)
