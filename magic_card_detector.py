@@ -777,7 +777,30 @@ class MagicCardDetector:
             contours += self.contour_image_rgb(full_image)
         else:
             raise ValueError('Unknown segmentation mode.')
+
+        def isValid(cnt):
+            quad = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+            return len(quad) >= 4 and cv2.contourArea(cnt) > 100
+
+        contours = filter(isValid, contours)
+
         contours_sorted = sorted(contours, key=cv2.contourArea, reverse=True)
+
+        test = full_image.copy()
+        
+        # output = cv2.copyMakeBorder(full_image, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=(100, 100, 100))
+        # output = cv2.Canny(output, 100, 200)
+        # cv2.drawContours(test, contours_sorted, -1, (0, 255, 0), 3)
+        # output = test.copy()
+
+        # contours = self.contour_image_gray(test, thresholding='simple')
+
+        # cv2.drawContours(output, contours, -1, (0, 0, 255), 3)
+
+        # cv2.imshow('Contours', output)
+        # cv2.waitKey(0)
+
+
         return contours_sorted
 
     def segment_image(self, test_image, contouring_mode='gray'):
@@ -791,7 +814,29 @@ class MagicCardDetector:
         max_segment_area = 0.01  # largest card area
 
         contours = self.contour_image(full_image, mode=contouring_mode)
+
+        # output = full_image.copy()
+
+        # print("found", len(contours), "contours")
+
         for card_contour in contours:
+            # print("checking contour")
+
+            # peri = cv2.arcLength(card_contour, True)
+            # approx = cv2.approxPolyDP(card_contour, 0.02 * peri, True)
+            # # if len(approx) == 4:
+            # cv2.drawContours(output, [approx], -1, (0,255,0), 3)
+
+            # # rect = cv2.minAreaRect(card_contour)
+            # # box = cv2.boxPoints(rect)
+            # # box = np.int0(box)
+            
+            # # cv2.polylines(output, [box], True, (0, 255, 0), 2)
+            # cv2.imshow('contours', output)
+            # cv2.waitKey(0)
+
+
+
             try:
                 (continue_segmentation,
                  is_card_candidate,
