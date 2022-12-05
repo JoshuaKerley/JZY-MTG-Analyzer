@@ -474,12 +474,14 @@ class TestImage:
         Finds doubly (or multiply) segmented cards and marks all but one
         as a fragment (that is, an unnecessary duplicate)
         """
+
         for (candidate, other_candidate) in product(self.candidate_list,
                                                     repeat=2):
             if candidate.is_fragment or other_candidate.is_fragment:
                 continue
             if ((candidate.is_recognized or other_candidate.is_recognized) and
                     candidate is not other_candidate):
+                print("in here")
                 i_area = candidate.bounding_quad.intersection(
                     other_candidate.bounding_quad).area
                 min_area = min(candidate.bounding_quad.area,
@@ -514,7 +516,7 @@ class TestImage:
                     candidate.bounding_quad.exterior.coords)[:-1, 0]
                 bquad_corners[:, 1] = np.asarray(
                     candidate.bounding_quad.exterior.coords)[:-1, 1]
-                
+
                 # Scale up the bounding box to match scaled output image
                 bquad_corners *= 2
 
@@ -548,8 +550,8 @@ class TestImage:
                     print("name: ", card_json['name'], " cost: ", card_json['mana_cost'], "\nOracle text: ", card_json['oracle_text'], "\n\n")
                 # Read overlay image
                 overlay = cv2.imread('reference_images/' + candidate.name + '.png')
-                
-        
+
+
                 # Draw overlay onto output image
                 output = cv2.warpPerspective(overlay, H, (output.shape[1], output.shape[0]), output, cv2.INTER_LINEAR, cv2.BORDER_TRANSPARENT)
 
@@ -637,6 +639,8 @@ class MagicCardDetector:
 
         self.clahe = cv2.createCLAHE(clipLimit=2.0,
                                      tileGridSize=(8, 8))
+
+        self.print_i = 0
 
     def export_reference_data(self, path):
         """
@@ -788,19 +792,25 @@ class MagicCardDetector:
 
             return 4 <= len(quad) <= 8 and cv2.contourArea(cnt) > 1000 and 0.5 < w/h < 2
 
-        contours = [cv2.convexHull(c) for c in contours]
-        contours = filter(isValid, contours)
+        hulls = [cv2.convexHull(c) for c in contours]
+        contours = filter(isValid, hulls)
 
         contours_sorted = sorted(contours, key=cv2.contourArea, reverse=True)
 
         # test = full_image.copy()
-        
         # output = cv2.copyMakeBorder(full_image, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=(100, 100, 100))
         # output = cv2.Canny(output, 100, 200)
         # blank_image = np.zeros((full_image.shape[0], full_image.shape[1], 1), np.uint8)
         # with_lines = blank_image.copy()
-        # output = full_image.copy()
-        # cv2.drawContours(output, contours_sorted, -1, (0,255,0), 3)
+
+        output = full_image.copy()
+
+        cv2.drawContours(output, contours_sorted, -1, (0,255,0), 3)
+        cv2.imwrite(f'contour_result/{self.test_images[self.print_i].name}', output)
+        cv2.drawContours(output, hulls, -1, (0,255,0), 3)
+        cv2.imwrite(f'hull_result/{self.test_images[self.print_i].name}', output)
+
+        self.print_i += 1
 
 
         # gray = cv2.cvtColor(full_image,cv2.COLOR_BGR2GRAY)
@@ -809,7 +819,7 @@ class MagicCardDetector:
         # blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0)
         # canny = cv2.Canny(blur_gray, 100, 200)
 
-        
+
 
         # lines = cv2.HoughLines(canny,1,np.pi/180,150)
         # for r_theta in lines:
@@ -827,7 +837,7 @@ class MagicCardDetector:
 
         # with_lines = cv2.GaussianBlur(with_lines, (5, 5), 0)
         # contours, _ = cv2.findContours(with_lines, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        
+
 
         # contours = self.contour_image_gray(test, thresholding='simple')
         # contours = filter(isValid, contours)
@@ -868,7 +878,7 @@ class MagicCardDetector:
             # # rect = cv2.minAreaRect(card_contour)
             # # box = cv2.boxPoints(rect)
             # # box = np.int0(box)
-            
+
             # # cv2.polylines(output, [box], True, (0, 255, 0), 2)
             # cv2.imshow('contours', output)
             # cv2.waitKey(0)
