@@ -347,14 +347,7 @@ def characterize_card_contour(card_contour,
     to several charasteristic parameters.
     """
     phull = convex_hull_polygon(card_contour)
-    # if (phull.area < 0.1 * max_segment_area or
-    #         phull.area < image_area / 1000.):
-    #     # break after card size range has been explored
-    #     continue_segmentation = False
-    #     is_card_candidate = False
-    #     bounding_poly = None
-    #     crop_factor = 1.
-    # else:
+
     continue_segmentation = True
     bounding_poly = get_bounding_quad(phull)
     qc_diff = quad_corner_diff(phull, bounding_poly)
@@ -387,15 +380,6 @@ class CardCandidate:
     recognition_score: float = 0.
     is_fragment: bool = False
     name: str = 'unknown'
-
-    # def __init__(self, im_seg, bquad, fraction):
-    #    self.image = im_seg
-    #    self.bounding_quad = bquad
-    #    self.is_recognized = False
-    #    self.recognition_score = 0.
-    #    self.is_fragment = False
-    #    self.image_area_fraction = fraction
-    #    self.name = 'unknown'
 
     def contains(self, other):
         """
@@ -455,7 +439,6 @@ class TestImage:
         self.phash = None
         self.visual = False
         self.histogram_adjust()
-        # self.calculate_phash()
 
         self.candidate_list = []
 
@@ -679,7 +662,6 @@ class MagicCardDetector:
         filenames = glob.glob(path + '*.png')
         for filename in filenames:
             img = cv2.imread(filename)
-            #print(os.path.basename(filename).split('.')[0])
             img_name = os.path.basename(filename).split('.')[0]
             self.reference_images.append(
                 ReferenceImage(img_name, img, self.clahe))
@@ -797,57 +779,14 @@ class MagicCardDetector:
 
         contours_sorted = sorted(contours, key=cv2.contourArea, reverse=True)
 
-        # test = full_image.copy()
-        # output = cv2.copyMakeBorder(full_image, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=(100, 100, 100))
-        # output = cv2.Canny(output, 100, 200)
-        # blank_image = np.zeros((full_image.shape[0], full_image.shape[1], 1), np.uint8)
-        # with_lines = blank_image.copy()
-
         output = full_image.copy()
 
         cv2.drawContours(output, contours_sorted, -1, (0,255,0), 3)
-        cv2.imwrite(f'contour_result/{self.test_images[self.print_i].name}', output)
+        cv2.imwrite(f'contour_result/{self.test_images[self.print_i].name}.jpg', output)
         cv2.drawContours(output, hulls, -1, (0,255,0), 3)
-        cv2.imwrite(f'hull_result/{self.test_images[self.print_i].name}', output)
+        cv2.imwrite(f'hull_result/{self.test_images[self.print_i].name}.jpg', output)
 
         self.print_i += 1
-
-
-        # gray = cv2.cvtColor(full_image,cv2.COLOR_BGR2GRAY)
-
-        # kernel_size = 5
-        # blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0)
-        # canny = cv2.Canny(blur_gray, 100, 200)
-
-
-
-        # lines = cv2.HoughLines(canny,1,np.pi/180,150)
-        # for r_theta in lines:
-        #     arr = np.array(r_theta[0], dtype=np.float64)
-        #     r, theta = arr
-        #     a = np.cos(theta)
-        #     b = np.sin(theta)
-        #     x0 = a*r
-        #     y0 = b*r
-        #     x1 = int(x0 + 1000*(-b))
-        #     y1 = int(y0 + 1000*(a))
-        #     x2 = int(x0 - 1000*(-b))
-        #     y2 = int(y0 - 1000*(a))
-        #     cv2.line(test, (x1, y1), (x2, y2), (0,255,0), 2)
-
-        # with_lines = cv2.GaussianBlur(with_lines, (5, 5), 0)
-        # contours, _ = cv2.findContours(with_lines, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-
-        # contours = self.contour_image_gray(test, thresholding='simple')
-        # contours = filter(isValid, contours)
-        # contours_sorted = sorted(contours, key=cv2.contourArea, reverse=True)
-
-        # cv2.drawContours(output, contours, -1, 255, 3)
-
-        # cv2.imshow('Contours', output)
-        # cv2.waitKey(0)
-
 
         return contours_sorted
 
@@ -863,25 +802,7 @@ class MagicCardDetector:
 
         contours = self.contour_image(full_image, mode=contouring_mode)
 
-        # output = full_image.copy()
-
-        # print("found", len(contours), "contours")
-
         for card_contour in contours:
-            # print("checking contour")
-
-            # peri = cv2.arcLength(card_contour, True)
-            # approx = cv2.approxPolyDP(card_contour, 0.02 * peri, True)
-            # # if len(approx) == 4:
-            # cv2.drawContours(output, [approx], -1, (0,255,0), 3)
-
-            # # rect = cv2.minAreaRect(card_contour)
-            # # box = cv2.boxPoints(rect)
-            # # box = np.int0(box)
-
-            # # cv2.polylines(output, [box], True, (0, 255, 0), 2)
-            # cv2.imshow('contours', output)
-            # cv2.waitKey(0)
 
             try:
                 (continue_segmentation,
@@ -898,8 +819,7 @@ class MagicCardDetector:
                  is_card_candidate,
                  bounding_poly,
                  crop_factor) = (True, False, None, 1.)
-            # if not continue_segmentation:
-            #     break
+
             if is_card_candidate:
                 if max_segment_area < 0.1:
                     max_segment_area = bounding_poly.area
